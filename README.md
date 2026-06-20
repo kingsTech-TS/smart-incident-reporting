@@ -266,5 +266,5 @@ Real‑time communication via WebSocket for live updates.
 ---
 
 ## License
-MIT
+king'sTech
 
