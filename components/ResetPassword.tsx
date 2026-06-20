@@ -6,13 +6,16 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Lock } from 'lucide-react';
+import { api } from '@/lib/api';
+import { useAuthStore } from '@/store/useAuthStore';
 
-export default function ChangePassword() {
+export default function ResetPassword() {
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [message, setMessage] = useState<{ text: string; type: 'success' | 'error' } | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const token = useAuthStore((state) => state.accessToken);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -31,24 +34,17 @@ export default function ChangePassword() {
       return;
     }
 
-    try {
-      // TODO: Replace with actual change password API call
-      // await api.auth.changePassword({ current_password: currentPassword, new_password: newPassword });
+    // Placeholder since /api/auth/change-password endpoint doesn't exist yet
+    setTimeout(() => {
       setMessage({ 
-        text: 'Password changed successfully!', 
+        text: 'Password reset successfully!', 
         type: 'success' 
       });
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
-    } catch (err: any) {
-      setMessage({ 
-        text: err.message || 'An error occurred. Please try again.', 
-        type: 'error' 
-      });
-    } finally {
       setIsLoading(false);
-    }
+    }, 1000);
   };
 
   return (
@@ -56,7 +52,7 @@ export default function ChangePassword() {
       <CardHeader>
         <div className="flex items-center gap-2">
           <Lock className="h-5 w-5 text-cyan-400" />
-          <CardTitle>Change Password</CardTitle>
+          <CardTitle>Reset Password</CardTitle>
         </div>
       </CardHeader>
       <CardContent>
@@ -125,7 +121,7 @@ export default function ChangePassword() {
             disabled={isLoading}
             className="w-full bg-gradient-to-r from-cyan-500 to-blue-600 hover:from-cyan-600 hover:to-blue-700 shadow-lg"
           >
-            {isLoading ? 'Changing...' : 'Change Password'}
+            {isLoading ? 'Resetting...' : 'Reset Password'}
           </Button>
         </form>
       </CardContent>

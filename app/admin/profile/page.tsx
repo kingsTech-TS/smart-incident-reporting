@@ -9,7 +9,7 @@ import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/PageHeader';
 import { User, Mail, Phone, Lock } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
-import ChangePassword from '@/components/ChangePassword';
+import ResetPassword from '@/components/ResetPassword';
 
 export default function AdminProfilePage() {
   const { user } = useAuthStore();
@@ -110,7 +110,7 @@ export default function AdminProfilePage() {
               </TabsContent>
 
               <TabsContent value="password">
-                <ChangePassword />
+                <ResetPassword />
               </TabsContent>
             </Tabs>
           </div>

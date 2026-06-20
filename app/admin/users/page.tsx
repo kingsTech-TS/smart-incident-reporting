@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/PageHeader';
-import { Users, Mail, Phone, Shield, Search, AlertCircle } from 'lucide-react';
+import { Users, Mail, Phone, Shield, Search, AlertCircle, RefreshCw } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/api';
 
@@ -19,6 +19,7 @@ export default function AdminUsersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [activeFilter, setActiveFilter] = useState('all');
+  const [approvalFilter, setApprovalFilter] = useState('all');
   const { accessToken: token, user: currentUser } = useAuthStore((state) => state);
 
   const fetchUsers = async () => {
@@ -49,6 +50,13 @@ export default function AdminUsersPage() {
     if (activeFilter !== 'all') {
       result = result.filter(user => (activeFilter === 'active') === user.is_active);
     }
+    if (approvalFilter !== 'all') {
+      result = result.filter(user => {
+        if (approvalFilter === 'approved') return user.is_approved === true;
+        if (approvalFilter === 'pending') return user.is_approved === false;
+        return true;
+      });
+    }
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
       result = result.filter(user => 
@@ -59,7 +67,7 @@ export default function AdminUsersPage() {
     }
 
     setFilteredUsers(result);
-  }, [users, roleFilter, activeFilter, searchQuery]);
+  }, [users, roleFilter, activeFilter, approvalFilter, searchQuery]);
 
   const handleToggleActive = async (userId: string, currentStatus: boolean) => {
     if (!window.confirm(`Are you sure you want to ${currentStatus ? 'suspend' : 'unsuspend'} this user?`)) return;
@@ -72,6 +80,38 @@ export default function AdminUsersPage() {
       console.error('Failed to update user status:', err);
       setUsers(originalUsers);
       setError(err.message || 'Failed to update user status');
+    }
+  };
+
+  const handleChangeRole = async (userId: string, newRole: string) => {
+    if (userId === currentUser?.id) {
+      alert('You cannot change your own role!');
+      return;
+    }
+    if (!window.confirm(`Are you sure you want to change this user's role to ${newRole}?`)) return;
+
+    const originalUsers = [...users];
+    try {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, role: newRole } : u));
+      await api.users.changeRole(token!, userId, newRole);
+    } catch (err: any) {
+      console.error('Failed to change user role:', err);
+      setUsers(originalUsers);
+      setError(err.message || 'Failed to change user role');
+    }
+  };
+
+  const handleApproveUser = async (userId: string, approve: boolean) => {
+    if (!window.confirm(`Are you sure you want to ${approve ? 'approve' : 'reject'} this user?`)) return;
+
+    const originalUsers = [...users];
+    try {
+      setUsers(prev => prev.map(u => u.id === userId ? { ...u, is_approved: approve } : u));
+      await api.users.approve(token!, userId, approve);
+    } catch (err: any) {
+      console.error('Failed to approve user:', err);
+      setUsers(originalUsers);
+      setError(err.message || 'Failed to approve user');
     }
   };
 
@@ -97,6 +137,12 @@ export default function AdminUsersPage() {
     }
   };
 
+  const getApprovalColor = (isApproved: boolean) => {
+    return isApproved
+      ? 'bg-green-500/20 text-green-400 border-green-500/30'
+      : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
+  };
+
   return (
     <DashboardLayout>
       <PageHeader
@@ -114,6 +160,7 @@ export default function AdminUsersPage() {
               className="ml-auto bg-slate-800 hover:bg-slate-700 border-slate-700"
               onClick={fetchUsers}
             >
+              <RefreshCw className="h-4 w-4 mr-2" />
               Retry
             </Button>
           </div>
@@ -151,6 +198,16 @@ export default function AdminUsersPage() {
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={approvalFilter} onValueChange={setApprovalFilter}>
+            <SelectTrigger className="w-full lg:w-40 bg-slate-900/50 border-slate-700">
+              <SelectValue placeholder="Filter approval" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <Card className="border-slate-700/50 bg-[#0b1220]">
@@ -161,7 +218,7 @@ export default function AdminUsersPage() {
             {loading ? (
               <div className="animate-pulse space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 bg-slate-800 rounded"></div>
+                  <div key={i} className="h-20 bg-slate-800 rounded"></div>
                 ))}
               </div>
             ) : (
@@ -173,49 +230,119 @@ export default function AdminUsersPage() {
                       <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Email</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Phone</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Role</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Approval</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Status</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
-                    {filteredUsers.map((user) => (
-                      <tr key={user.id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
-                        <td className="py-4 px-4">
-                          <div className="flex items-center gap-3">
-                            <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold">
-                              {user.full_name.charAt(0)}
-                            </div>
-                            <div>
-                              <p className="text-sm font-medium text-white">{user.full_name}</p>
-                            </div>
-                          </div>
-                        </td>
-                        <td className="py-4 px-4 text-sm text-slate-400 flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {user.email}
-                        </td>
-                        <td className="py-4 px-4 text-sm text-slate-400 flex items-center gap-1">
-                          <Phone className="h-3 w-3" />
-                          {user.phone || 'Not provided'}
-                        </td>
-                        <td className="py-4 px-4">
-                          <Badge className={getRoleColor(user.role)}>
-                            <Shield className="h-3 w-3 mr-1" />
-                            {user.role}
-                          </Badge>
-                        </td>
-                        <td className="py-4 px-4">
-                          <Badge
-                            className={
-                              user.is_active
-                                ? 'bg-green-500/20 text-green-400 border-green-500/30'
-                                : 'bg-red-500/20 text-red-400 border-red-500/30'
-                            }
-                          >
-                            {user.is_active ? 'Active' : 'Inactive'}
-                          </Badge>
+                    {filteredUsers.length === 0 ? (
+                      <tr>
+                        <td colSpan={7} className="py-8 text-center text-slate-400">
+                          No users found
                         </td>
                       </tr>
-                    ))}
+                    ) : (
+                      filteredUsers.map((user) => (
+                        <tr key={user.id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
+                          <td className="py-4 px-4">
+                            <div className="flex items-center gap-3">
+                              <div className="h-10 w-10 rounded-full bg-gradient-to-br from-cyan-500 to-blue-600 flex items-center justify-center text-white font-bold">
+                                {user.full_name.charAt(0)}
+                              </div>
+                              <div>
+                                <p className="text-sm font-medium text-white">{user.full_name}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="py-4 px-4 text-sm text-slate-400 flex items-center gap-1">
+                            <Mail className="h-3 w-3" />
+                            {user.email}
+                          </td>
+                          <td className="py-4 px-4 text-sm text-slate-400 flex items-center gap-1">
+                            <Phone className="h-3 w-3" />
+                            {user.phone || 'Not provided'}
+                          </td>
+                          <td className="py-4 px-4">
+                            {user.id === currentUser?.id ? (
+                              <Badge className={getRoleColor(user.role)}>
+                                <Shield className="h-3 w-3 mr-1" />
+                                {user.role}
+                              </Badge>
+                            ) : (
+                              <Select
+                                value={user.role}
+                                onValueChange={(newRole) => handleChangeRole(user.id, newRole)}
+                              >
+                                <SelectTrigger className="w-32 h-8 bg-slate-900/50 border-slate-700">
+                                  <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent className="bg-slate-900 border-slate-700">
+                                  <SelectItem value="citizen">Citizen</SelectItem>
+                                  <SelectItem value="responder">Responder</SelectItem>
+                                  <SelectItem value="admin">Admin</SelectItem>
+                                </SelectContent>
+                              </Select>
+                            )}
+                          </td>
+                          <td className="py-4 px-4">
+                            <Badge className={getApprovalColor(user.is_approved)}>
+                              {user.is_approved ? 'Approved' : 'Pending'}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-4">
+                            <Badge
+                              className={
+                                user.is_active
+                                  ? 'bg-green-500/20 text-green-400 border-green-500/30'
+                                  : 'bg-red-500/20 text-red-400 border-red-500/30'
+                              }
+                            >
+                              {user.is_active ? 'Active' : 'Inactive'}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex flex-wrap gap-2">
+                              {!user.is_approved && (
+                                <>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleApproveUser(user.id, true)}
+                                    className="bg-green-500/20 hover:bg-green-500/30 border-green-500/30 text-green-400"
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleApproveUser(user.id, false)}
+                                    className="bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/30 text-yellow-400"
+                                  >
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleToggleActive(user.id, user.is_active)}
+                                className="bg-slate-800 hover:bg-slate-700 border-slate-700"
+                              >
+                                {user.is_active ? 'Suspend' : 'Activate'}
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDeleteUser(user.id, user.full_name)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
                   </tbody>
                 </table>
               </div>

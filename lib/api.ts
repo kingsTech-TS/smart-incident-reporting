@@ -1,6 +1,6 @@
 import { useAuthStore } from '@/store/useAuthStore';
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8000';
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://smart-incident-reporting-db.onrender.com';
 
 class ApiError extends Error {
   status: number;
@@ -178,8 +178,14 @@ export async function apiRequest(
     return null;
   }
 
+  // Check if response is wrapped in data object
+  if (responseData && typeof responseData === 'object' && 'data' in responseData) {
+    return responseData.data;
+  }
   return responseData;
 }
+
+export { ApiError };
 
 export const api = {
   auth: {
@@ -189,13 +195,29 @@ export const api = {
     logout: (token: string) => apiRequest('/api/auth/logout', { method: 'POST' }, token),
     forgotPassword: (data: any) => apiRequest('/api/auth/forgot-password', { method: 'POST', body: JSON.stringify(data) }),
     resetPassword: (data: any) => apiRequest('/api/auth/reset-password', { method: 'POST', body: JSON.stringify(data) }),
+    changePassword: (data: any, token: string) => apiRequest('/api/auth/change-password', { method: 'POST', body: JSON.stringify(data) }, token),
   },
   users: {
-    me: (token: string) => apiRequest('/api/users/me', {}, token),
     get: (token: string) => apiRequest('/api/users', {}, token),
-    getById: (token: string, id: string) => apiRequest(`/api/users/${id}`, {}, token),
-    updateActiveStatus: (token: string, userId: string, isActive: boolean) => apiRequest(`/api/users/${userId}/active`, { method: 'PATCH', body: JSON.stringify({ is_active: isActive }) }, token),
-    delete: (token: string, userId: string) => apiRequest(`/api/users/${userId}`, { method: 'DELETE' }, token),
+    getMe: (token: string) => apiRequest('/api/users/me', {}, token),
+    getById: (token: string, userId: string) => apiRequest(`/api/users/${userId}`, {}, token),
+    updateActiveStatus: (token: string, userId: string, isActive: boolean) => 
+      apiRequest(`/api/users/${userId}`, { 
+        method: 'PATCH', 
+        body: JSON.stringify({ is_active: isActive }) 
+      }, token),
+    approve: (token: string, userId: string, isApproved: boolean) =>
+      apiRequest(`/api/users/${userId}/approve`, {
+        method: 'PATCH',
+        body: JSON.stringify({ is_approved: isApproved })
+      }, token),
+    changeRole: (token: string, userId: string, role: string) =>
+      apiRequest(`/api/users/${userId}/role`, {
+        method: 'PATCH',
+        body: JSON.stringify({ role })
+      }, token),
+    delete: (token: string, userId: string) => 
+      apiRequest(`/api/users/${userId}`, { method: 'DELETE' }, token),
   },
   incidents: {
     create: (token: string, data: any) => apiRequest('/api/incidents', { method: 'POST', body: JSON.stringify(data) }, token),

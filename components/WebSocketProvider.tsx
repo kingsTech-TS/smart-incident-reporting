@@ -29,7 +29,14 @@ export function WebSocketProvider({ children }: { children: React.ReactNode }) {
       return;
     }
 
-    const wsUrl = `${process.env.NEXT_PUBLIC_WS_URL || 'ws://localhost:8000'}/ws/${token}`;
+    // Derive WebSocket URL from API base URL if not set
+    let wsBaseUrl = process.env.NEXT_PUBLIC_WS_URL;
+    if (!wsBaseUrl) {
+      const apiUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://smart-incident-reporting-db.onrender.com';
+      wsBaseUrl = apiUrl.replace('http://', 'ws://').replace('https://', 'wss://');
+    }
+
+    const wsUrl = `${wsBaseUrl}/ws/${token}`;
     const ws = new WebSocket(wsUrl);
     wsRef.current = ws;
 

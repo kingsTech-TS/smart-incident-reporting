@@ -21,6 +21,7 @@ export default function AdminRespondersPage() {
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // 'all', 'online', 'offline'
   const [activeFilter, setActiveFilter] = useState('all'); // 'all', 'active', 'inactive'
+  const [approvalFilter, setApprovalFilter] = useState('all'); // 'all', 'approved', 'pending'
   const [error, setError] = useState<string | null>(null);
   const token = useAuthStore((state) => state.accessToken);
   const router = useRouter();
@@ -79,6 +80,13 @@ export default function AdminRespondersPage() {
       result = result.filter(r => !r.is_active);
     }
 
+    // Approval filter
+    if (approvalFilter === 'approved') {
+      result = result.filter(r => r.is_approved === true);
+    } else if (approvalFilter === 'pending') {
+      result = result.filter(r => r.is_approved === false);
+    }
+
     // Search filter
     if (searchQuery) {
       const query = searchQuery.toLowerCase();
@@ -90,7 +98,7 @@ export default function AdminRespondersPage() {
     }
 
     setFilteredResponders(result);
-  }, [responders, statusFilter, searchQuery, activeFilter]);
+  }, [responders, statusFilter, searchQuery, activeFilter, approvalFilter]);
 
   const toggleResponderSelection = (id: string) => {
     setSelectedResponderIds(prev => {
@@ -158,6 +166,48 @@ export default function AdminRespondersPage() {
     }
   };
 
+  const handleApproveResponder = async (userId: string, approve: boolean) => {
+    if (!window.confirm(`Are you sure you want to ${approve ? 'approve' : 'reject'} this responder?`)) return;
+
+    const originalResponders = [...responders];
+    try {
+      setResponders(prev => prev.map(r => r.id === userId ? { ...r, is_approved: approve } : r));
+      await api.users.approve(token!, userId, approve);
+    } catch (err: any) {
+      console.error('Failed to approve responder:', err);
+      setResponders(originalResponders);
+      setError(err.message || 'Failed to approve responder');
+    }
+  };
+
+  const handleToggleActive = async (userId: string, currentStatus: boolean) => {
+    if (!window.confirm(`Are you sure you want to ${currentStatus ? 'suspend' : 'activate'} this responder?`)) return;
+
+    const originalResponders = [...responders];
+    try {
+      setResponders(prev => prev.map(r => r.id === userId ? { ...r, is_active: !currentStatus } : r));
+      await api.users.updateActiveStatus(token!, userId, !currentStatus);
+    } catch (err: any) {
+      console.error('Failed to update responder status:', err);
+      setResponders(originalResponders);
+      setError(err.message || 'Failed to update responder status');
+    }
+  };
+
+  const handleDelete = async (userId: string, userName: string) => {
+    if (!window.confirm(`Are you sure you want to delete ${userName}? This action cannot be undone!`)) return;
+
+    const originalResponders = [...responders];
+    try {
+      setResponders(prev => prev.filter(r => r.id !== userId));
+      await api.users.delete(token!, userId);
+    } catch (err: any) {
+      console.error('Failed to delete responder:', err);
+      setResponders(originalResponders);
+      setError(err.message || 'Failed to delete responder');
+    }
+  };
+
   const getOnlineColor = (isOnline: boolean) => {
     return isOnline
       ? 'bg-green-500/20 text-green-400 border-green-500/30'
@@ -168,6 +218,12 @@ export default function AdminRespondersPage() {
     return isActive
       ? 'bg-green-500/20 text-green-400 border-green-500/30'
       : 'bg-red-500/20 text-red-400 border-red-500/30';
+  };
+
+  const getApprovalColor = (isApproved: boolean) => {
+    return isApproved
+      ? 'bg-green-500/20 text-green-400 border-green-500/30'
+      : 'bg-yellow-500/20 text-yellow-400 border-yellow-500/30';
   };
 
   const formatLastOnline = (lastOnline: string | null) => {
@@ -264,6 +320,16 @@ export default function AdminRespondersPage() {
               <SelectItem value="inactive">Inactive</SelectItem>
             </SelectContent>
           </Select>
+          <Select value={approvalFilter} onValueChange={setApprovalFilter}>
+            <SelectTrigger className="w-full md:w-40 bg-slate-900/50 border-slate-700">
+              <SelectValue placeholder="Filter approval" />
+            </SelectTrigger>
+            <SelectContent className="bg-slate-900 border-slate-700">
+              <SelectItem value="all">All</SelectItem>
+              <SelectItem value="approved">Approved</SelectItem>
+              <SelectItem value="pending">Pending</SelectItem>
+            </SelectContent>
+          </Select>
         </div>
 
         <Card className="border-slate-700/50 bg-[#0b1220]">
@@ -279,7 +345,7 @@ export default function AdminRespondersPage() {
             {loading ? (
               <div className="animate-pulse space-y-4">
                 {[1, 2, 3].map((i) => (
-                  <div key={i} className="h-16 bg-slate-800 rounded"></div>
+                  <div key={i} className="h-20 bg-slate-800 rounded"></div>
                 ))}
               </div>
             ) : (
@@ -298,15 +364,17 @@ export default function AdminRespondersPage() {
                       <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Responder</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Email</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Phone</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Approval</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Online Status</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Account Status</th>
                       <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Last Online</th>
+                      <th className="text-left py-3 px-4 text-sm font-medium text-slate-400">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
                     {filteredResponders.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-400">
+                        <td colSpan={9} className="py-8 text-center text-slate-400">
                           No responders found
                         </td>
                       </tr>
@@ -344,6 +412,11 @@ export default function AdminRespondersPage() {
                             {responder.phone || 'Not provided'}
                           </td>
                           <td className="py-4 px-4">
+                            <Badge className={getApprovalColor(responder.is_approved)}>
+                              {responder.is_approved ? 'Approved' : 'Pending'}
+                            </Badge>
+                          </td>
+                          <td className="py-4 px-4">
                             <Badge className={getOnlineColor(responder.is_online)}>
                               {responder.is_online ? 'Online' : 'Offline'}
                             </Badge>
@@ -356,6 +429,45 @@ export default function AdminRespondersPage() {
                           <td className="py-4 px-4 text-sm text-slate-400 flex items-center gap-1">
                             <Clock className="h-3 w-3" />
                             {formatLastOnline(responder.last_online)}
+                          </td>
+                          <td className="py-4 px-4">
+                            <div className="flex flex-wrap gap-2">
+                              {!responder.is_approved && (
+                                <>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleApproveResponder(responder.id, true)}
+                                    className="bg-green-500/20 hover:bg-green-500/30 border-green-500/30 text-green-400"
+                                  >
+                                    Approve
+                                  </Button>
+                                  <Button
+                                    variant="secondary"
+                                    size="sm"
+                                    onClick={() => handleApproveResponder(responder.id, false)}
+                                    className="bg-yellow-500/20 hover:bg-yellow-500/30 border-yellow-500/30 text-yellow-400"
+                                  >
+                                    Reject
+                                  </Button>
+                                </>
+                              )}
+                              <Button
+                                variant="secondary"
+                                size="sm"
+                                onClick={() => handleToggleActive(responder.id, responder.is_active)}
+                                className="bg-slate-800 hover:bg-slate-700 border-slate-700"
+                              >
+                                {responder.is_active ? 'Suspend' : 'Activate'}
+                              </Button>
+                              <Button
+                                variant="destructive"
+                                size="sm"
+                                onClick={() => handleDelete(responder.id, responder.full_name)}
+                              >
+                                Delete
+                              </Button>
+                            </div>
                           </td>
                         </tr>
                       ))
