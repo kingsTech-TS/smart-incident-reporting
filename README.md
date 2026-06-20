@@ -9,10 +9,11 @@ A modern, responsive Smart City Incident Reporting and Response System built wit
 3. [Project Structure](#project-structure)
 4. [Features](#features)
 5. [User Roles](#user-roles)
-6. [Getting Started](#getting-started)
-7. [API Documentation](#api-documentation)
-8. [WebSocket](#websocket)
-9. [Data Models](#data-models)
+6. [User Approval System](#user-approval-system)
+7. [Getting Started](#getting-started)
+8. [API Documentation](#api-documentation)
+9. [WebSocket](#websocket)
+10. [Data Models](#data-models)
 
 ---
 
@@ -89,18 +90,27 @@ smart-incident-reporting/
 ### Admin Features
 - 📊 Analytics dashboard with charts and metrics
 - 📋 Manage all incidents (assign, update, close)
-- 👥 Manage users (activate/deactivate, delete)
+- 👥 Manage users (activate/deactivate, delete, change roles)
+- ✅ Approve/reject responder accounts
 - 📍 View real‑time responder locations
 - 🔍 Filter and search incidents by multiple criteria
 
 ---
 
 ## User Roles
-| Role       | Description                                                                 |
-|------------|-----------------------------------------------------------------------------|
-| `citizen`  | Reports incidents, views own incident history and real‑time status updates  |
-| `responder`| Responds to assigned incidents, updates status, shares live location       |
-| `admin`    | Oversees the entire system, manages incidents, users, and views analytics  |
+| Role         | Description                                                                 |
+|--------------|-----------------------------------------------------------------------------|
+| `citizen`    | Reports incidents, views own incident history and real‑time status updates  |
+| `responder`  | Responds to assigned incidents, updates status, shares live location       |
+| `admin`      | Oversees the entire system, manages incidents, users, and views analytics  |
+
+---
+
+## User Approval System
+- Citizens are auto-approved on registration
+- Responder accounts require admin approval before they can log in
+- Admins can approve/reject pending responder accounts
+- Admins can change any user's role
 
 ---
 
@@ -171,6 +181,9 @@ For a complete list, refer to the [backend API docs](./frontend.md#api-endpoints
 | Responders     | GET    | `/api/responders/tasks`       | Get responder's assigned tasks       |
 | Responders     | POST   | `/api/responders/location`    | Share live location                  |
 | Analytics      | GET    | `/api/analytics/overview`     | Get analytics overview (admin only)  |
+| Users          | GET    | `/api/users`                  | Get all users (admin only)           |
+| Users          | PATCH  | `/api/users/{id}/approve`     | Approve/reject user (admin only)     |
+| Users          | PATCH  | `/api/users/{id}/role`        | Change user role (admin only)        |
 
 ---
 
@@ -205,6 +218,9 @@ Real‑time communication via WebSocket for live updates.
   "phone": "string",
   "role": "citizen|responder|admin",
   "is_active": true,
+  "is_approved": true,
+  "is_online": false,
+  "last_online": "datetime",
   "created_at": "datetime"
 }
 ```
@@ -251,6 +267,4 @@ Real‑time communication via WebSocket for live updates.
 
 ## License
 MIT
-#   s m a r t - i n c i d e n t - r e p o r t i n g 
- 
- 
+
