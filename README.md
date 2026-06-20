@@ -265,6 +265,10 @@ Real‑time communication via WebSocket for live updates.
 
 ---
 
+## Lead Developer
+Nnabugwu Solomon
+08163690428
+
 ## License
 king'sTech
 
