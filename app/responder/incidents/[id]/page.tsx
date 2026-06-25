@@ -7,7 +7,7 @@ import { Badge } from '@/components/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import DashboardLayout from '@/components/DashboardLayout';
 import PageHeader from '@/components/PageHeader';
-import { MapPin, Clock, User, ArrowLeft, CheckCircle2, Users, Navigation } from 'lucide-react';
+import { MapPin, Clock, User, ArrowLeft, CheckCircle2, Users } from 'lucide-react';
 import { useAuthStore } from '@/store/useAuthStore';
 import { api } from '@/lib/api';
 import dynamic from 'next/dynamic';
@@ -25,17 +25,15 @@ export default function ResponderIncidentDetailsPage() {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const token = useAuthStore((state) => state.accessToken);
 
-  const openInGoogleMaps = () => {
-    if (!incident?.latitude || !incident?.longitude) return;
-    const url = `https://www.google.com/maps/dir/?api=1&destination=${incident.latitude},${incident.longitude}`;
-    window.open(url, '_blank');
-  };
+
 
   useEffect(() => {
     const fetchIncident = async () => {
       try {
         if (!token || !params.id) return;
         const data = await api.incidents.getById(token, params.id as string);
+        console.log('[ResponderIncidentPage] incident data:', data);
+        console.log('[ResponderIncidentPage] lat:', data?.latitude, '| lng:', data?.longitude, '| types:', typeof data?.latitude, typeof data?.longitude);
         setIncident(data);
       } catch (err) {
         console.error('Failed to fetch incident:', err);
@@ -228,24 +226,17 @@ export default function ResponderIncidentDetailsPage() {
                   </div>
                 )}
 
-                {incident.latitude && incident.longitude && (
+                {incident.latitude != null && incident.longitude != null && (
                   <div>
-                    <h4 className="font-medium text-white mb-2">Location</h4>
-                    <div className="h-80 w-full rounded-lg overflow-hidden border border-slate-700 mb-4">
+                    <h4 className="font-medium text-white mb-3">Location &amp; Directions</h4>
+                    {/* flex flex-col so ResponderMap's inner flex:1 map div has a proper flex parent */}
+                    <div style={{ height: 480 }} className="w-full flex flex-col rounded-lg">
                       <ResponderMap
-                        incidentLat={incident.latitude}
-                        incidentLng={incident.longitude}
-                        className="h-full w-full"
+                        incidentLat={Number(incident.latitude)}
+                        incidentLng={Number(incident.longitude)}
+                        className="flex-1 min-h-0 flex flex-col"
                       />
                     </div>
-                    <Button
-                      variant="secondary"
-                      onClick={openInGoogleMaps}
-                      className="w-full sm:w-auto bg-slate-800 hover:bg-slate-700 border-slate-700"
-                    >
-                      <Navigation className="h-4 w-4 mr-2" />
-                      Open Directions in Google Maps
-                    </Button>
                   </div>
                 )}
 

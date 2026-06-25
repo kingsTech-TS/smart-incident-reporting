@@ -31,16 +31,8 @@ export default function ResponderDashboardPage() {
     }
   };
 
-  useEffect(() => {
-    fetchData();
-  }, [token]);
-
-  useEffect(() => {
-    // Refresh data when WebSocket message is received
-    if (lastMessage) {
-      fetchData();
-    }
-  }, [lastMessage]);
+  useEffect(() => { fetchData(); }, [token]);
+  useEffect(() => { if (lastMessage) fetchData(); }, [lastMessage]);
 
   const active = incidents.filter(i => i.status !== 'resolved' && i.status !== 'closed').length;
   const completed = incidents.filter(i => i.status === 'resolved' || i.status === 'closed').length;
@@ -71,10 +63,7 @@ export default function ResponderDashboardPage() {
 
   return (
     <DashboardLayout>
-      <PageHeader
-        title="My Tasks"
-        subtitle="View and manage your assigned incidents"
-      />
+      <PageHeader title="My Tasks" subtitle="View and manage your assigned incidents" />
       <div className="px-8 pb-8">
         <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
           {stats.map((stat, index) => (
@@ -101,9 +90,7 @@ export default function ResponderDashboardPage() {
           <CardContent>
             {loading ? (
               <div className="animate-pulse space-y-4">
-                {[1, 2, 3].map(i => (
-                  <div key={i} className="h-12 bg-slate-800 rounded"></div>
-                ))}
+                {[1, 2, 3].map(i => <div key={i} className="h-12 bg-slate-800 rounded" />)}
               </div>
             ) : (
               <div className="overflow-x-auto">
@@ -122,42 +109,43 @@ export default function ResponderDashboardPage() {
                   <tbody>
                     {incidents.length === 0 ? (
                       <tr>
-                        <td colSpan={7} className="py-8 text-center text-slate-400">
-                          No assigned incidents yet
-                        </td>
+                        <td colSpan={7} className="py-8 text-center text-slate-400">No assigned incidents yet</td>
                       </tr>
                     ) : (
                       incidents.map((incident) => (
-                        <tr key={incident.id} className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors">
+                        <tr
+                          key={incident.id}
+                          className="border-b border-slate-800 hover:bg-slate-800/30 transition-colors cursor-pointer"
+                          onClick={() => router.push(`/responder/incidents/${incident.id}`)}
+                        >
                           <td className="py-4 px-4 text-sm font-mono text-cyan-400">{incident.id}</td>
                           <td className="py-4 px-4 text-sm font-medium text-white">{incident.title}</td>
-                          <td className="py-4 px-4 text-sm text-slate-400 flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {incident.address || 'N/A'}
+                          <td className="py-4 px-4 text-sm text-slate-400">
+                            <span className="flex items-center gap-1">
+                              <MapPin className="h-3 w-3" />
+                              {incident.address || (incident.latitude ? `${Number(incident.latitude).toFixed(4)}, ${Number(incident.longitude).toFixed(4)}` : 'N/A')}
+                            </span>
                           </td>
                           <td className="py-4 px-4">
-                            <Badge className={getSeverityColor(incident.severity)}>
-                              {incident.severity}
-                            </Badge>
+                            <Badge className={getSeverityColor(incident.severity)}>{incident.severity}</Badge>
                           </td>
                           <td className="py-4 px-4">
-                            <Badge className={getStatusColor(incident.status)}>
-                              {incident.status.replace('_', ' ')}
-                            </Badge>
+                            <Badge className={getStatusColor(incident.status)}>{incident.status.replace('_', ' ')}</Badge>
                           </td>
-                          <td className="py-4 px-4 text-sm text-slate-400 flex items-center gap-1">
-                            <Clock className="h-3 w-3" />
-                            {incident.created_at ? new Date(incident.created_at).toLocaleString() : 'N/A'}
+                          <td className="py-4 px-4 text-sm text-slate-400">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {incident.created_at ? new Date(incident.created_at).toLocaleString() : 'N/A'}
+                            </span>
                           </td>
-                          <td className="py-4 px-4 flex gap-2">
+                          <td className="py-4 px-4" onClick={(e) => e.stopPropagation()}>
                             <Button
                               variant="secondary"
                               size="sm"
                               className="bg-slate-800 hover:bg-slate-700 border-slate-700"
                               onClick={() => router.push(`/responder/incidents/${incident.id}`)}
                             >
-                              <Eye className="h-4 w-4 mr-1" />
-                              View
+                              <Eye className="h-4 w-4 mr-1" /> View
                             </Button>
                           </td>
                         </tr>

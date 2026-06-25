@@ -1,17 +1,6 @@
 'use client';
 import React from 'react';
-import { MapContainer, TileLayer, Marker } from 'react-leaflet';
-import L from 'leaflet';
-
-// Fix Leaflet icon issues
-if (typeof window !== 'undefined') {
-  delete (L.Icon.Default.prototype as any)._getIconUrl;
-  L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-  });
-}
+import { APIProvider, Map, AdvancedMarker } from '@vis.gl/react-google-maps';
 
 interface IncidentMapProps {
   latitude: number;
@@ -20,19 +9,34 @@ interface IncidentMapProps {
 }
 
 export default function IncidentMap({ latitude, longitude, className = '' }: IncidentMapProps) {
+  const apiKey = process.env.NEXT_PUBLIC_GOOGLE_MAPS_API_KEY || '';
+
+  const safeLat = Number(latitude);
+  const safeLng = Number(longitude);
+  const position = { lat: safeLat, lng: safeLng };
+
   return (
     <div className={className}>
-      <MapContainer
-        center={[latitude, longitude]}
-        zoom={15}
-        style={{ height: '100%', width: '100%' }}
-      >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
-        <Marker position={[latitude, longitude]} />
-      </MapContainer>
+      <APIProvider apiKey={apiKey}>
+        <Map
+          defaultCenter={position}
+          defaultZoom={15}
+          gestureHandling={'greedy'}
+          disableDefaultUI={true}
+          mapId="admin-incident-map"
+          style={{ height: '100%', width: '100%' }}
+        >
+          <AdvancedMarker position={position} title="Incident Location">
+            <div style={{
+              width: 24, height: 24, borderRadius: '50%',
+              background: '#ef4444',
+              border: '3px solid white',
+              boxShadow: '0 0 0 3px rgba(239,68,68,0.35), 0 2px 8px rgba(0,0,0,0.4)',
+            }} />
+          </AdvancedMarker>
+        </Map>
+      </APIProvider>
     </div>
   );
 }
+
